@@ -70,10 +70,8 @@ target_include_directories(simple SYSTEM PRIVATE
     ${YAML_CPP_INCLUDE_DIR}
     ${SQLite3_INCLUDE_DIRS}
     ${HDF5_INCLUDE_DIRS}
-    ${RAPIDJSON_INCLUDE_DIRS}
     ${RapidJSON_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
-    ${ZLIB_INCLUDE_DIRECTORIES}
 )
 
 # Link libraries

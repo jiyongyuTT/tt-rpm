@@ -15,7 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from parse_stats import parse_retire_lines, parse_setup_time
+from parse_stats import parse_retire_lines
 
 
 def pct_change(a: float, b: float) -> float:

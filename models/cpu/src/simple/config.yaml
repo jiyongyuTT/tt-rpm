@@ -6,7 +6,7 @@
 instr_size: 4
 
 # Optional: path to ELF for ExecutionDriver/Whisper (if set, fetch is driven by Whisper ISS).
-# Build test ELFs: make -C tests/programs
+# Build test ELFs: make -C tests
 target_command: ""
 
 # Stage widths (instructions/ops per cycle). Uneven values model superscalar bottlenecks.

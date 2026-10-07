@@ -18,7 +18,5 @@ pipeline*.txt
 # Python
 __pycache__/
 *.pyc
-out.txt
-ilog.txt
 
 .cursor/
