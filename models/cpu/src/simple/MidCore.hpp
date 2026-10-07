@@ -9,30 +9,6 @@
 #include "Logging.hpp"
 #include "Types.hpp"
 
-class MergedRegisterFile {
-    std::vector<bool> free_list;
-    std::vector<uint64_t> architectural_registers;
-    std::vector<uint64_t> speculative_registers;
-
-   public:
-    int getFreeRegister() {  // this is emulating a priority encoder i guess
-        for (size_t i = 0; i < free_list.size(); i++) {
-            if (free_list[i]) {
-                free_list[i] = false;
-                return i;
-            }
-        }
-        return -1;
-    }
-    void releaseRegister(uint64_t register_index) { free_list[register_index] = true; }
-    void renameRegister(uint64_t register_index, uint64_t physical_id) { architectural_registers[register_index] = physical_id; }
-    void commitRegister(uint64_t register_index) { architectural_registers[register_index] = speculative_registers[register_index]; }
-};
-
-class IssueQueue {
-    std::vector<Instruction> instructions;
-};
-
 class MidCore : public sparta::Unit {
    public:
     sparta::DataInPort<Instruction> inst_in{&unit_port_set_, "inst_in"};

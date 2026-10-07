@@ -81,10 +81,6 @@ void FetchQueue::receiveFlush_(const core::FlushRequest& req) {
         bool should_flush = frontendShouldSquash(it->pkt.tag, it->pkt.wrong_path_depth, req);
 
         if (should_flush) {
-            auto pending_it = mPendingBranchTags.find(it->pkt.tag);
-            if (pending_it != mPendingBranchTags.end()) {
-                mPendingBranchTags.erase(pending_it);
-            }
             if (mVis) mVis->onSquash(it->pkt.fetch_seq, current_cycle);
             it = mQueue.erase(it);
         } else {

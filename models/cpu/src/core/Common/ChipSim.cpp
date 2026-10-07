@@ -104,7 +104,6 @@ void ChipSim::initExecutionDriver(const std::string& target_command, const std::
 
     mExecutionDriver = new cpu::ExecutionDriver(driver_node, params);
     mExecutionDriver->setId(0);
-    mExecutionDriver->setTraceFileName(trace_filename);
 
     if (!mExecutionDriver->doSetup(0)) {
         std::cerr << "[chipsim] Failed to setup ExecutionDriver\n";
@@ -283,7 +282,6 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     execute->setDownstream(lsq);
     lsq->setCache(dcache);
     writeback->setLsq(lsq);
-    writeback->setRename(rename);
 
     // Execute → FlushArbiter (misprediction flush)
     execute->mispred_flush_out.bind(flush_arbiter->exe_flush_in);
@@ -317,7 +315,7 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
 
     // L2 cache (enabled param on L2Cache unit)
     bool l2_enabled = l2->isEnabled();
-    if (l2_enabled && l2) {
+    if (l2_enabled) {
         icache->fill_request_out.bind(l2->icache_request_in);
         l2->icache_response_out.bind(icache->fill_response_in);
         dcache->fill_request_out.bind(l2->dcache_request_in);
@@ -427,7 +425,7 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     // Pipeline clock wiring
     clock->setStages(fetch, icache, fetch_queue, decode, decode_queue, bp, rename, issue, execute, lsq, dcache, writeback);
     if (mWritePortArbiter) clock->setArbiter(mWritePortArbiter.get());
-    if (l2_enabled && l2) clock->setL2(l2);
+    if (l2_enabled) clock->setL2(l2);
     clock->setFlushArbiter(flush_arbiter);
 
     // Speculation config (params on Core)
@@ -492,7 +490,7 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
             icache->setTracer(mIcacheTracer.get());
             mDcacheTracer = std::make_unique<cpu::CacheTracer>("dcache", 0);
             dcache->setTracer(mDcacheTracer.get());
-            if (l2_enabled && l2) {
+            if (l2_enabled) {
                 mL2Tracer = std::make_unique<cpu::CacheTracer>("l2cache", 0);
                 l2->setTracer(mL2Tracer.get());
             }

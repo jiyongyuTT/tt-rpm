@@ -399,10 +399,7 @@ bool ExecutionDriver::executeInstruction(InstPtr &inst, bool onSpeculativePath) 
     return true;
 }
 
-bool ExecutionDriver::retireInstruction(uint64_t tag, uint32_t rob_occupancy, uint32_t rob_size) {
-    (void)rob_occupancy;
-    (void)rob_size;
-
+bool ExecutionDriver::retireInstruction(uint64_t tag) {
     if (!mSetupDone) {
         return true;
     }
@@ -520,7 +517,7 @@ const std::shared_ptr<TT_PERF::InstrPac> ExecutionDriver::processNextRecordHelpe
     sparta_assert(pacPtr->instrVa() == fetchPc, "[processNextRecordHelper] Instruction virtual address mismatch: expected: "
                                                     << std::hex << fetchPc << " got: " << pacPtr->instrVa() << " for tag: " << tag << std::dec);
 
-    ok = ok and perfApi.decode(mHartIx, 0, tag);
+    ok = perfApi.decode(mHartIx, 0, tag);
     sparta_assert(ok, "Decode failure in execution driver");
 
     const WdRiscv::DecodedInst &decodedInst = pacPtr->decodedInst();
@@ -533,8 +530,6 @@ const std::shared_ptr<TT_PERF::InstrPac> ExecutionDriver::processNextRecordHelpe
     if ((!flush && execute) || (needsExecute && !isSerializing(pacPtr))) {
         ok = perfApi.execute(mHartIx, 0, tag);
         sparta_assert(ok, "Execute failure in execution driver");
-
-        trap = trap or pacPtr->trapped();
     }
 
     bool traceRecordSuccess = populateTraceRecord(record, pacPtr);
@@ -869,19 +864,6 @@ uint64_t ExecutionDriver::flushInstruction(uint64_t tag) {
     ILOG("[flushInstruction] Flush complete, mNextPc: " << std::hex << mNextPc << " next fetch instruction id: " << std::dec << mSequence);
 
     return numInstsFlushed;
-}
-
-bool ExecutionDriver::flushInstruction(InstPtr &inst) {
-    const auto modelTag = inst->getId().getInstNum();
-
-    auto &perfApi = *mPerfApiHandle;
-    const auto pacPtr = perfApi.getInstructionPacket(mHartIx, modelTag);
-    sparta_assert(pacPtr, "[Execution Driver] instruction being flushed, tag " << modelTag << " must be valid in perfApi");
-
-    bool ok = perfApi.flush(mHartIx, 0, modelTag);
-    sparta_assert(ok, "[Execution Driver] Flush for inst id " << modelTag << " Failed in whisper");
-
-    return true;
 }
 
 }  // namespace cpu

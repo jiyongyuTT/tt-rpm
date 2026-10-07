@@ -140,9 +140,6 @@ bool CacheInterface::checkStoreBufferForward(address_t addr, uint8_t size) const
 bool CacheInterface::loadRequest(uint64_t token, address_t addr, uint64_t cycle) {
     // Check bank availability for read port
     if (!tryConsumeReadPort(addr)) {
-        if (mTracer) {
-            // Record bank conflict event
-        }
         return false;
     }
 

@@ -322,12 +322,6 @@ bool LSQ::checkStoreForwarding(LoadQueue::Entry& load) {
         return true;
     }
 
-    // Also check D-cache store buffer if available
-    if (mDcache) {
-        // D-cache now has store buffer forwarding check
-        // This requires the cache interface to be updated
-    }
-
     return false;
 }
 

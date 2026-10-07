@@ -123,11 +123,6 @@ class FrontendMemoryStructures : public sparta::Unit {
 
     std::deque<PendingFetch> mPendingRequests;  // probabilistic mode only
 
-    // Active flush state - filter packets arriving after flush due to port delay
-    bool mFlushActive{false};
-    uint64_t mFlushCycle{0};
-    core::FlushRequest mActiveFlush;
-
     double mHitRate;
     uint32_t mHitLatency;
     uint32_t mMissLatency;
