@@ -145,46 +145,49 @@ void Rename::tick() {
     }
 }
 
+bool Rename::hasPendingPacket_() const { return mDirectMode ? !mPendingPackets.empty() : !mDecodeQueue->isEmpty(); }
+
+const core::DecodePacket* Rename::peekPacket_() const {
+    if (mDirectMode) {
+        return mPendingPackets.empty() ? nullptr : &mPendingPackets.front();
+    }
+    return mDecodeQueue->peek();
+}
+
+core::DecodePacket Rename::pullPacket_() {
+    if (mDirectMode) {
+        auto dp = mPendingPackets.front();
+        mPendingPackets.erase(mPendingPackets.begin());
+        return dp;
+    }
+    return mDecodeQueue->pullOne();
+}
+
+void Rename::extractRegOperands_(const core::DecodePacket& dp, std::vector<core::RegOperand>& src_regs, std::vector<core::RegOperand>& dst_regs) {
+    const auto& rec = dp.pkt.inst->getTraceRecord();
+    for (const auto& src : rec.sourceOperands) {
+        auto rt = static_cast<core::RegType>(src.type);
+        if (!core::isRegFileType(rt)) continue;
+        src_regs.push_back({rt, static_cast<uint8_t>(src.number)});
+    }
+    for (const auto& dst : rec.modifiedRegs) {
+        auto rt = static_cast<core::RegType>(dst.type);
+        if (!core::isRegFileType(rt)) continue;
+        dst_regs.push_back({rt, static_cast<uint8_t>(dst.number)});
+    }
+}
+
 uint32_t Rename::tickOoo_() {
     mRenamedBuf.clear();
     uint32_t dispatched = 0;
 
-    auto hasPackets = [this]() { return mDirectMode ? !mPendingPackets.empty() : !mDecodeQueue->isEmpty(); };
-
-    auto peekPacket = [this]() -> const core::DecodePacket* {
-        if (mDirectMode) {
-            return mPendingPackets.empty() ? nullptr : &mPendingPackets.front();
-        }
-        return mDecodeQueue->peek();
-    };
-
-    auto pullPacket = [this]() -> core::DecodePacket {
-        if (mDirectMode) {
-            auto dp = mPendingPackets.front();
-            mPendingPackets.erase(mPendingPackets.begin());
-            return dp;
-        }
-        return mDecodeQueue->pullOne();
-    };
-
-    while (dispatched < mDispatchWidth && hasPackets()) {
-        const auto* peek = peekPacket();
+    while (dispatched < mDispatchWidth && hasPendingPacket_()) {
+        const auto* peek = peekPacket_();
         if (!peek) break;
 
-        // Extract operand info from the instruction
         std::vector<core::RegOperand> src_regs;
         std::vector<core::RegOperand> dst_regs;
-        const auto& rec = peek->pkt.inst->getTraceRecord();
-        for (const auto& src : rec.sourceOperands) {
-            auto rt = static_cast<core::RegType>(src.type);
-            if (!core::isRegFileType(rt)) continue;
-            src_regs.push_back({rt, static_cast<uint8_t>(src.number)});
-        }
-        for (const auto& dst : rec.modifiedRegs) {
-            auto rt = static_cast<core::RegType>(dst.type);
-            if (!core::isRegFileType(rt)) continue;
-            dst_regs.push_back({rt, static_cast<uint8_t>(dst.number)});
-        }
+        extractRegOperands_(*peek, src_regs, dst_regs);
 
         if (!mPrf.canAllocate(dst_regs)) break;
         if (mRob && !mRob->canAllocate()) break;
@@ -205,7 +208,7 @@ uint32_t Rename::tickOoo_() {
         }
 
         // Pull the packet
-        auto dp = pullPacket();
+        auto dp = pullPacket_();
 
         // Reserve slot to prevent over-dispatching in same cycle
         mDownstream->reserveSlot(dp.uop_type);
@@ -294,42 +297,13 @@ uint32_t Rename::tickInorder_() {
     mIssuedBuf.clear();
     uint32_t dispatched = 0;
 
-    auto hasPackets = [this]() { return mDirectMode ? !mPendingPackets.empty() : !mDecodeQueue->isEmpty(); };
-
-    auto peekPacket = [this]() -> const core::DecodePacket* {
-        if (mDirectMode) {
-            return mPendingPackets.empty() ? nullptr : &mPendingPackets.front();
-        }
-        return mDecodeQueue->peek();
-    };
-
-    auto pullPacket = [this]() -> core::DecodePacket {
-        if (mDirectMode) {
-            auto dp = mPendingPackets.front();
-            mPendingPackets.erase(mPendingPackets.begin());
-            return dp;
-        }
-        return mDecodeQueue->pullOne();
-    };
-
-    while (dispatched < mDispatchWidth && hasPackets()) {
-        const auto* peek = peekPacket();
+    while (dispatched < mDispatchWidth && hasPendingPacket_()) {
+        const auto* peek = peekPacket_();
         if (!peek) break;
 
-        // Extract operand info from the instruction
         std::vector<core::RegOperand> src_regs;
         std::vector<core::RegOperand> dst_regs;
-        const auto& rec = peek->pkt.inst->getTraceRecord();
-        for (const auto& src : rec.sourceOperands) {
-            auto rt = static_cast<core::RegType>(src.type);
-            if (!core::isRegFileType(rt)) continue;
-            src_regs.push_back({rt, static_cast<uint8_t>(src.number)});
-        }
-        for (const auto& dst : rec.modifiedRegs) {
-            auto rt = static_cast<core::RegType>(dst.type);
-            if (!core::isRegFileType(rt)) continue;
-            dst_regs.push_back({rt, static_cast<uint8_t>(dst.number)});
-        }
+        extractRegOperands_(*peek, src_regs, dst_regs);
 
         if (!mDownstreamExecute->isReadyForType(peek->uop_type)) break;
         if (!mArchScoreboard.sourcesReady(src_regs)) break;
@@ -342,7 +316,7 @@ uint32_t Rename::tickInorder_() {
         if (mLsq && is_mem_store && !mLsq->canClaimStore()) break;
 
         // Pull the packet
-        auto dp = pullPacket();
+        auto dp = pullPacket_();
 
         mDownstreamExecute->reserveSlot(dp.uop_type);
 

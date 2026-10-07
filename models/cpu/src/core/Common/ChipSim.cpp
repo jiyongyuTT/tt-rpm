@@ -43,6 +43,9 @@
 
 namespace {
 
+// Read a parameter of the given ParameterSet node as its string representation.
+std::string paramValue(sparta::TreeNode* params, const char* name) { return params->getChild(name)->getAs<sparta::ParameterBase>()->getValueAsString(); }
+
 #define ADD_TO_TREE(parent, child_name, child_type)                                                                                                \
     auto* child_name##_tn = new sparta::ResourceTreeNode(parent, #child_name, sparta::TreeNode::GROUP_NAME_NONE, sparta::TreeNode::GROUP_IDX_NONE, \
                                                          #child_name, getResourceSet()->getResourceFactory(child_type::name));                     \
@@ -217,7 +220,7 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
 
     // Check if we're bypassing queues (simpler wrong-path bring-up)
     auto* core_ps = core_tn->getChild("params");
-    bool bypass_queues = core_ps->getChild("bypass_queues")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+    bool bypass_queues = paramValue(core_ps, "bypass_queues") == "true";
 
     if (bypass_queues) {
         // Direct mode: ICache → Decode → Rename (bypass FetchQueue and DecodeQueue)
@@ -330,8 +333,8 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     // Write-port arbiter (params on Execute)
     {
         auto* exe_ps = core_tn->getChild("execute.params");
-        std::string wp_mode = exe_ps->getChild("write_port_mode")->getAs<sparta::ParameterBase>()->getValueAsString();
-        uint32_t wp_count = std::stoul(exe_ps->getChild("write_port_count")->getAs<sparta::ParameterBase>()->getValueAsString());
+        std::string wp_mode = paramValue(exe_ps, "write_port_mode");
+        uint32_t wp_count = std::stoul(paramValue(exe_ps, "write_port_count"));
         mWritePortArbiter = std::make_unique<midcore::WritePortArbiter>();
 
         if (wp_mode == "mapped") {
@@ -362,9 +365,8 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     {
         auto* iss_ps = core_tn->getChild("issue.params");
         midcore::BypassNetwork::Config bn_cfg;
-        bn_cfg.enabled = iss_ps->getChild("bypass_network_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
-        bn_cfg.regfile_read_latency =
-            static_cast<uint8_t>(std::stoul(iss_ps->getChild("bypass_regfile_read_latency")->getAs<sparta::ParameterBase>()->getValueAsString()));
+        bn_cfg.enabled = paramValue(iss_ps, "bypass_network_enabled") == "true";
+        bn_cfg.regfile_read_latency = static_cast<uint8_t>(std::stoul(paramValue(iss_ps, "bypass_regfile_read_latency")));
 
         if (bn_cfg.enabled) {
             // Read bypass_paths vector<string> from the Issue parameter
@@ -392,13 +394,12 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     // Writeback buffer (params on Execute)
     {
         auto* exe_ps = core_tn->getChild("execute.params");
-        bool wb_enabled = exe_ps->getChild("writeback_buffer_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+        bool wb_enabled = paramValue(exe_ps, "writeback_buffer_enabled") == "true";
         if (wb_enabled) {
             midcore::WritebackBuffer::Config wb_cfg;
-            wb_cfg.capacity = std::stoul(exe_ps->getChild("writeback_buffer_capacity")->getAs<sparta::ParameterBase>()->getValueAsString());
-            wb_cfg.drain_width = std::stoul(exe_ps->getChild("writeback_buffer_drain_width")->getAs<sparta::ParameterBase>()->getValueAsString());
-            wb_cfg.writeback_latency =
-                static_cast<uint8_t>(std::stoul(exe_ps->getChild("writeback_buffer_latency")->getAs<sparta::ParameterBase>()->getValueAsString()));
+            wb_cfg.capacity = std::stoul(paramValue(exe_ps, "writeback_buffer_capacity"));
+            wb_cfg.drain_width = std::stoul(paramValue(exe_ps, "writeback_buffer_drain_width"));
+            wb_cfg.writeback_latency = static_cast<uint8_t>(std::stoul(paramValue(exe_ps, "writeback_buffer_latency")));
             mWritebackBuffer = std::make_unique<midcore::WritebackBuffer>();
             mWritebackBuffer->configure(wb_cfg);
             execute->setWritebackBuffer(mWritebackBuffer.get());
@@ -408,13 +409,13 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     // Register file banking (params on Rename)
     {
         auto* rn_ps = core_tn->getChild("rename.params");
-        bool banking = rn_ps->getChild("regfile_banking_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+        bool banking = paramValue(rn_ps, "regfile_banking_enabled") == "true";
         if (banking) {
             midcore::PhysicalRegisterFile::BankConfig bank_cfg;
             bank_cfg.enabled = true;
-            bank_cfg.num_banks = std::stoul(rn_ps->getChild("regfile_num_banks")->getAs<sparta::ParameterBase>()->getValueAsString());
-            bank_cfg.reads_per_bank = std::stoul(rn_ps->getChild("regfile_reads_per_bank")->getAs<sparta::ParameterBase>()->getValueAsString());
-            bank_cfg.writes_per_bank = std::stoul(rn_ps->getChild("regfile_writes_per_bank")->getAs<sparta::ParameterBase>()->getValueAsString());
+            bank_cfg.num_banks = std::stoul(paramValue(rn_ps, "regfile_num_banks"));
+            bank_cfg.reads_per_bank = std::stoul(paramValue(rn_ps, "regfile_reads_per_bank"));
+            bank_cfg.writes_per_bank = std::stoul(paramValue(rn_ps, "regfile_writes_per_bank"));
             rename->getPrf().configureBanking(bank_cfg);
             issue->setPhysicalRegisterFile(&rename->getPrf());
         }
@@ -431,12 +432,12 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     // Speculation config (params on Core)
     {
         core::SpeculationConfig spec_cfg;
-        spec_cfg.enabled = core_ps->getChild("wrong_path_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
-        spec_cfg.max_depth = static_cast<uint8_t>(std::stoul(core_ps->getChild("wrong_path_max_depth")->getAs<sparta::ParameterBase>()->getValueAsString()));
+        spec_cfg.enabled = paramValue(core_ps, "wrong_path_enabled") == "true";
+        spec_cfg.max_depth = static_cast<uint8_t>(std::stoul(paramValue(core_ps, "wrong_path_max_depth")));
         core::setSpeculationConfig(spec_cfg);
 
         // Configure static misprediction penalty (used when wrong_path_enabled=false)
-        uint32_t mispred_penalty = std::stoul(core_ps->getChild("misprediction_penalty_cycles")->getAs<sparta::ParameterBase>()->getValueAsString());
+        uint32_t mispred_penalty = std::stoul(paramValue(core_ps, "misprediction_penalty_cycles"));
         fetch->setMispredictionPenalty(mispred_penalty);
 
         if (spec_cfg.enabled) {
@@ -448,12 +449,12 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
 
     // Visualizer (params on Core)
     {
-        bool vis_enabled = core_ps->getChild("visualizer_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+        bool vis_enabled = paramValue(core_ps, "visualizer_enabled") == "true";
         if (vis_enabled) {
-            uint32_t max_instr = std::stoul(core_ps->getChild("visualizer_max_instructions")->getAs<sparta::ParameterBase>()->getValueAsString());
-            std::string output_file = core_ps->getChild("visualizer_output_file")->getAs<sparta::ParameterBase>()->getValueAsString();
-            std::string format = core_ps->getChild("visualizer_format")->getAs<sparta::ParameterBase>()->getValueAsString();
-            bool color = core_ps->getChild("visualizer_color")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+            uint32_t max_instr = std::stoul(paramValue(core_ps, "visualizer_max_instructions"));
+            std::string output_file = paramValue(core_ps, "visualizer_output_file");
+            std::string format = paramValue(core_ps, "visualizer_format");
+            bool color = paramValue(core_ps, "visualizer_color") == "true";
             mVisualizer = std::make_unique<core::PipelineVisualizer>(max_instr, output_file, format, color);
             auto* v = mVisualizer.get();
             fetch->setVisualizer(v);
@@ -470,11 +471,11 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
             if (mWritePortArbiter) mWritePortArbiter->setVisualizer(v);
 
             // Debug mode: detailed per-cycle output for a specific cycle range
-            bool debug_enabled = core_ps->getChild("visualizer_debug_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+            bool debug_enabled = paramValue(core_ps, "visualizer_debug_enabled") == "true";
             if (debug_enabled) {
-                std::string debug_file = core_ps->getChild("visualizer_debug_file")->getAs<sparta::ParameterBase>()->getValueAsString();
-                uint64_t start_cycle = std::stoull(core_ps->getChild("visualizer_debug_start_cycle")->getAs<sparta::ParameterBase>()->getValueAsString());
-                uint64_t end_cycle = std::stoull(core_ps->getChild("visualizer_debug_end_cycle")->getAs<sparta::ParameterBase>()->getValueAsString());
+                std::string debug_file = paramValue(core_ps, "visualizer_debug_file");
+                uint64_t start_cycle = std::stoull(paramValue(core_ps, "visualizer_debug_start_cycle"));
+                uint64_t end_cycle = std::stoull(paramValue(core_ps, "visualizer_debug_end_cycle"));
                 v->enableDebugMode(debug_file, start_cycle, end_cycle);
             }
         }
@@ -482,10 +483,10 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
 
     // Cache viewer (params on Core)
     {
-        bool cv_enabled = core_ps->getChild("cache_viewer_enabled")->getAs<sparta::ParameterBase>()->getValueAsString() == "true";
+        bool cv_enabled = paramValue(core_ps, "cache_viewer_enabled") == "true";
         if (cv_enabled) {
-            mCacheViewerFormat = core_ps->getChild("cache_viewer_format")->getAs<sparta::ParameterBase>()->getValueAsString();
-            mCacheViewerOutfile = core_ps->getChild("cache_viewer_output_file")->getAs<sparta::ParameterBase>()->getValueAsString();
+            mCacheViewerFormat = paramValue(core_ps, "cache_viewer_format");
+            mCacheViewerOutfile = paramValue(core_ps, "cache_viewer_output_file");
             mIcacheTracer = std::make_unique<cpu::CacheTracer>("icache", 0);
             icache->setTracer(mIcacheTracer.get());
             mDcacheTracer = std::make_unique<cpu::CacheTracer>("dcache", 0);

@@ -81,11 +81,9 @@ class DecodeStructures : public sparta::Unit {
     void receivePackets_(const std::vector<core::PipelinePacket>& pkts);
     void receiveBranchPrediction_(const core::BranchPrediction& pred);
 
-    static constexpr size_t kNumUopTypes = 9;
-
     static core::UopType classifyUop(cpu::InstClass ic);
 
-    std::array<uint8_t, kNumUopTypes> mLatencyTable{};
+    std::array<uint8_t, core::kNumUopTypes> mLatencyTable{};
 
     frontend::FetchQueue* mFetchQueue{nullptr};
     frontend::DecodeQueue* mDecodeQueue{nullptr};

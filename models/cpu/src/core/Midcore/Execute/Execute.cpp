@@ -186,6 +186,34 @@ void Execute::handleBranchMisprediction_(const InFlightUop& uop) {
     mispred_flush_out.send(flush, 0);
 }
 
+void Execute::resolveBranch_(InFlightUop& uop, const char* log_prefix) {
+    const auto& ipkt = uop.pkt;
+
+    // Detect misprediction from Whisper trace: compare predicted vs actual
+    const auto& rec = ipkt.pkt.inst->getTraceRecord();
+    bool actual_taken = (rec.takenBranchTarget != 0);
+    bool predicted_taken = ipkt.predicted_taken;
+    bool mispredicted = (actual_taken != predicted_taken);
+
+    ILOG(log_prefix << " cycle " << getClock()->currentCycle() << " branch tag=" << ipkt.pkt.tag << " depth=" << static_cast<int>(ipkt.pkt.wrong_path_depth)
+                    << " predicted=" << predicted_taken << " actual=" << actual_taken << " mispredicted=" << mispredicted);
+
+    if (mispredicted) {
+        // Update the packet's misprediction flag and handle it
+        uop.pkt.was_mispredicted = true;
+        handleBranchMisprediction_(uop);
+    } else {
+        // Branch predicted correctly - signal depth decrement
+        core::BranchResolved resolved;
+        resolved.branch_tag = ipkt.pkt.tag;
+        resolved.branch_fetch_seq = ipkt.pkt.fetch_seq;
+        resolved.resolved_depth = ipkt.pkt.wrong_path_depth;
+        branch_resolved_out.send(resolved, 0);
+        ILOG(log_prefix << " cycle " << getClock()->currentCycle() << " CORRECT prediction: tag=" << resolved.branch_tag
+                        << " depth=" << static_cast<int>(resolved.resolved_depth));
+    }
+}
+
 void Execute::tick() {
     for (auto& g : mGroups) g.clearPending();
 
@@ -226,30 +254,7 @@ void Execute::tick() {
 
                 // Check for branch misprediction
                 if (is_branch && core::getSpeculationConfig().enabled) {
-                    // Detect misprediction from Whisper trace: compare predicted vs actual
-                    const auto& rec = ipkt.pkt.inst->getTraceRecord();
-                    bool actual_taken = (rec.takenBranchTarget != 0);
-                    bool predicted_taken = ipkt.predicted_taken;
-                    bool mispredicted = (actual_taken != predicted_taken);
-
-                    ILOG("[execute] cycle " << getClock()->currentCycle() << " branch tag=" << ipkt.pkt.tag
-                                            << " depth=" << static_cast<int>(ipkt.pkt.wrong_path_depth) << " predicted=" << predicted_taken
-                                            << " actual=" << actual_taken << " mispredicted=" << mispredicted);
-
-                    if (mispredicted) {
-                        // Update the packet's misprediction flag and handle it
-                        it->pkt.was_mispredicted = true;
-                        handleBranchMisprediction_(*it);
-                    } else {
-                        // Branch predicted correctly - signal depth decrement
-                        core::BranchResolved resolved;
-                        resolved.branch_tag = ipkt.pkt.tag;
-                        resolved.branch_fetch_seq = ipkt.pkt.fetch_seq;
-                        resolved.resolved_depth = ipkt.pkt.wrong_path_depth;
-                        branch_resolved_out.send(resolved, 0);
-                        ILOG("[execute] cycle " << getClock()->currentCycle() << " CORRECT prediction: tag=" << resolved.branch_tag
-                                                << " depth=" << static_cast<int>(resolved.resolved_depth));
-                    }
+                    resolveBranch_(*it, "[execute]");
                 }
 
                 // Save fetch_seq before potential move
@@ -309,29 +314,7 @@ void Execute::tick() {
 
             // Check for branch misprediction (arbiter-enabled path)
             if (is_branch && core::getSpeculationConfig().enabled) {
-                // Detect misprediction from Whisper trace: compare predicted vs actual
-                const auto& rec = ipkt.pkt.inst->getTraceRecord();
-                bool actual_taken = (rec.takenBranchTarget != 0);
-                bool predicted_taken = ipkt.predicted_taken;
-                bool mispredicted = (actual_taken != predicted_taken);
-
-                ILOG("[execute-arb] cycle " << getClock()->currentCycle() << " branch tag=" << ipkt.pkt.tag
-                                            << " depth=" << static_cast<int>(ipkt.pkt.wrong_path_depth) << " predicted=" << predicted_taken
-                                            << " actual=" << actual_taken << " mispredicted=" << mispredicted);
-
-                if (mispredicted) {
-                    it->pkt.was_mispredicted = true;
-                    handleBranchMisprediction_(*it);
-                } else {
-                    // Branch predicted correctly - signal depth decrement
-                    core::BranchResolved resolved;
-                    resolved.branch_tag = ipkt.pkt.tag;
-                    resolved.branch_fetch_seq = ipkt.pkt.fetch_seq;
-                    resolved.resolved_depth = ipkt.pkt.wrong_path_depth;
-                    branch_resolved_out.send(resolved, 0);
-                    ILOG("[execute-arb] cycle " << getClock()->currentCycle() << " CORRECT prediction: tag=" << resolved.branch_tag
-                                                << " depth=" << static_cast<int>(resolved.resolved_depth));
-                }
+                resolveBranch_(*it, "[execute-arb]");
             }
 
             if (is_memory) {
