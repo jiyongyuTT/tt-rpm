@@ -236,7 +236,6 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
     } else {
         // Normal mode: BranchPredictor → FetchQueue (predictions)
         bp->predict_out.bind(fetch_queue->branch_predict_in);
-        // Normal mode with queues
         // ICache → FetchQueue (packets after cache latency)
         icache->packets_to_queue_out.bind(fetch_queue->packets_in);
 
@@ -420,8 +419,6 @@ void ChipSim::bindCore(sparta::TreeNode* core_tn) {
             issue->setPhysicalRegisterFile(&rename->getPrf());
         }
     }
-
-    // Issue partitioned mode is now self-configured in Issue constructor from params
 
     // Pipeline clock wiring
     clock->setStages(fetch, icache, fetch_queue, decode, decode_queue, bp, rename, issue, execute, lsq, dcache, writeback);

@@ -26,7 +26,6 @@ LSQ::LSQ(sparta::TreeNode* node, const LSQParams* params)
       mMaxSqOccupancy(&unit_stat_set_, "max_sq_occupancy", "Peak total store-queue occupancy", sparta::Counter::COUNT_LATEST),
       mSumLqOccupancy(&unit_stat_set_, "sum_lq_occupancy", "Sum of load-queue occupancy per tick (mean = /cpu_cycles)", sparta::Counter::COUNT_NORMAL),
       mSumSqOccupancy(&unit_stat_set_, "sum_sq_occupancy", "Sum of store-queue occupancy per tick (mean = /cpu_cycles)", sparta::Counter::COUNT_NORMAL) {
-    // Determine capacities (use new params if set, else fall back to legacy)
     uint32_t lq_cap = params->load_queue_capacity;
     uint32_t sq_cap = params->store_queue_capacity;
 
@@ -135,8 +134,7 @@ void LSQ::receivePackets_(const std::vector<core::IssuePacket>& pkts) {
             ++mNumStores;
         }
 
-        // Add to completion order - ALWAYS, even when going to pending.
-        // This ensures ROB knows about all instructions in program order.
+        // Add to completion order so the ROB learns about every memory op in program order.
         // OOO dispatch means packets may arrive out of order, so insert sorted by tag.
         CompletionEntry new_entry{
             .tag = ipkt.pkt.tag, .rob_token = ipkt.rob_token, .is_store = is_store, .completed = is_store};  // Stores complete immediately
@@ -290,9 +288,9 @@ void LSQ::receiveFlush_(const core::FlushRequest& req) {
         }
     }
 
-    // Squash from completion order tracking (legacy fallback for tag > branch_tag)
-    // Note: This is now mostly redundant since we remove from mCompletionOrder when
-    // removing from load/store/pending queues above. Kept for safety.
+    // Squash from completion order tracking (fallback for tag > branch_tag).
+    // Mostly redundant since entries are removed from mCompletionOrder together with
+    // their load/store queue entries above; kept for safety.
     auto co_it = mCompletionOrder.begin();
     while (co_it != mCompletionOrder.end()) {
         if (co_it->tag > req.branch_tag) {

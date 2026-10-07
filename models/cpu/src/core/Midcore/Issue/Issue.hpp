@@ -187,7 +187,7 @@ struct PendingWakeup {
 };
 
 // ============================================================================
-// Scheduler Config — passed from CoreTop after YAML parsing
+// Scheduler Config — parsed from the scheduler_configs parameter
 // ============================================================================
 struct SchedulerPortConfig {
     std::string name;

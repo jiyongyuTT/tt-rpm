@@ -9,8 +9,8 @@ namespace cpu {
 
 static InstClass classifyAlu(const WhisperUtil::TraceRecord& rec) {
     std::string_view name = rec.instructionName();
-    // Strip any width suffix (mulw, divuw, remw, etc.) for prefix matching
-    if (name.starts_with("mul") || name.starts_with("mulh")) return InstClass::Multiply;
+    // Prefix matching also covers the high-half and width variants (mulh, mulw, divuw, remw, etc.)
+    if (name.starts_with("mul")) return InstClass::Multiply;
     if (name.starts_with("div") || name.starts_with("rem")) return InstClass::Divide;
     return InstClass::ALU;
 }

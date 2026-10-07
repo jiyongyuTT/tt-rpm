@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Tenstorrent USA, Inc.
 
-
 #include "SnapshotUtil.hpp"
 
 #include <sys/stat.h>
 
 #include <filesystem>
+#include <iostream>
 #include <regex>
-
-#include "sparta/utils/SpartaAssert.hpp"
+#include <sstream>
 
 namespace cpu {
 

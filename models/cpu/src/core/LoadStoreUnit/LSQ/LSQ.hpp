@@ -54,7 +54,7 @@ class LSQ : public sparta::Unit {
 
     LSQ(sparta::TreeNode* node, const LSQParams* params);
 
-    // ── Ports (same as before for compatibility) ─────────────────────────────
+    // ── Ports ────────────────────────────────────────────────────────────────
 
     sparta::DataInPort<std::vector<core::IssuePacket>> in_port{&unit_port_set_, "packets_in"};
 

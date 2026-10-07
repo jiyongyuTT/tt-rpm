@@ -232,8 +232,6 @@ void Issue::buildPartitioned(const std::vector<SchedulerConfig>& configs) {
     }
 
     // Resize pending reservations to match the new scheduler count.
-    // This is deferred here (not in the constructor) because partitioned
-    // schedulers are set up after construction via configurePartitioned().
     mPendingReservations.assign(mSchedulers.size(), 0);
 }
 

@@ -13,17 +13,15 @@
 #include "models/cpu/common/SnapshotUtil.hpp"
 #include "models/cpu/common/whisper_include_fix.hpp"
 
-// Constants for store conditional memory operation handling
 namespace {
+// Constants for store conditional memory operation handling
 constexpr unsigned SC_SIZE_CODE_MASK = 3;
 constexpr unsigned SC_SIZE_CODE_SHIFT = 12;
 constexpr unsigned SC_SIZE_1_BYTE = 0;
 constexpr unsigned SC_SIZE_2_BYTE = 1;
 constexpr unsigned SC_SIZE_4_BYTE = 2;
 constexpr unsigned SC_SIZE_8_BYTE = 3;
-}  // namespace
 
-namespace {
 constexpr uint64_t PAGE_SIZE_4KB_BYTES = 4096;
 inline uint64_t get_page(uint64_t addr) { return addr / PAGE_SIZE_4KB_BYTES; }
 inline uint64_t get_page_offset(uint64_t addr) { return addr & (PAGE_SIZE_4KB_BYTES - 1); }
@@ -441,11 +439,9 @@ bool ExecutionDriver::retireInstruction(uint64_t tag) {
         }
 
         if (!mNextPcSet && mNextPcSetInstId == perfApiTag) {
-            // FIX: For both trapped and non-trapped instructions, use nextPc().
-            // For trapped instructions, nextPc() returns the trap handler address.
-            // The previous code incorrectly used instrVa() + instrSize() for trapped
-            // instructions, which gave the sequential next instruction instead of
-            // the trap handler, causing PC divergence with Whisper.
+            // Use nextPc() for both trapped and non-trapped instructions: for a
+            // trapped instruction it returns the trap handler address, which keeps
+            // the model's PC in sync with Whisper.
             mNextPc = pacPtr->nextPc();
             mNextPcSet = true;
         }
@@ -582,7 +578,7 @@ bool ExecutionDriver::populateRecordOperands(WhisperUtil::TraceRecord &record, c
     const auto destCount = pacPtr->getDestOperands(destOperands);
 
     sparta_assert(srcCount <= 3, "[Execution Driver] source operand count: " << srcCount << " higher than expected");
-    sparta_assert(destCount <= 2, "[Execution Driver] source operand count: " << destCount << " higher than expected");
+    sparta_assert(destCount <= 2, "[Execution Driver] destination operand count: " << destCount << " higher than expected");
 
     for (unsigned i = 0; i < srcCount; i++) {
         WhisperUtil::Operand operand;
