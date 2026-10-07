@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 Tenstorrent USA, Inc.
+
 // Bare-metal "util.h" shim for the RPM core model.
 //
 // The riscv-tests Dhrystone sources (tests/riscv-tests/benchmarks/dhrystone/

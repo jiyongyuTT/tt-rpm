@@ -64,7 +64,7 @@ top.core0:
       log_enabled: false
   branch_predictor:
     params:
-      accuracy: 0.9  # 95% accuracy - was 0 which caused spurious mispredictions
+      accuracy: 0.9                    # Probability that a branch is predicted correctly
   rename:
     params:
       dispatch_width: 4

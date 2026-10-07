@@ -4,7 +4,7 @@
 # SPDX-FileCopyrightText: 2026 Tenstorrent USA, Inc.
 
 # Install 64-bit RISC-V toolchain via Conda (no sudo). Creates env 'riscv' and installs riscv-tools.
-# Run from this directory. Requires conda (miniconda or anaconda).
+# Requires conda (miniconda or anaconda).
 
 set -e
 ENV_NAME="${RISCV_CONDA_ENV:-riscv}"
@@ -32,9 +32,8 @@ conda create -n "$ENV_NAME" -c ucb-bar -c conda-forge -y riscv-tools || {
 }
 
 echo ""
-echo "Done. To build the assembly tests:"
+echo "Done. To build the test workloads:"
 echo "  conda activate $ENV_NAME"
-echo "  cd $(dirname "$0")"
-echo "  make"
+echo "  make -C $(dirname "$0")"
 echo ""
-echo "Then set target_command in config.yaml to the ELF path and run the core model."
+echo "Then run them in the core model, e.g.: make -C $(dirname "$0") run_coremark"

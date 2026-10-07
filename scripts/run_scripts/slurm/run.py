@@ -16,7 +16,8 @@ Given one or more experiment config files and a set of benchmarks, this tool
 Run with --dry-run to generate everything but skip sbatch. Run with --blocking
 to wait on the jobs and then auto-invoke parse_slurm_results.py.
 
-See scripts/run_scripts/slurm/README.md for full usage.
+Run with --help for all options. See configs/experiment_configs/core_baseline.yml
+for an example experiment config and benchmarks.yml for the benchmark registry.
 """
 from __future__ import annotations
 
