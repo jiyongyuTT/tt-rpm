@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -12,9 +11,6 @@
 #include "PipelinePacket.hpp"
 
 namespace midcore {
-
-// Forward declaration
-class Execute;
 
 // ============================================================================
 // Bypass Path Configuration
@@ -101,7 +97,6 @@ class BypassNetwork {
 
     bool mEnabled{false};
     uint8_t mRegfileReadLatency{1};
-    uint32_t mNumFuGroups{0};
 
     // FU name -> index mapping (set during configure)
     std::unordered_map<std::string, uint8_t> mFuNameToIndex;

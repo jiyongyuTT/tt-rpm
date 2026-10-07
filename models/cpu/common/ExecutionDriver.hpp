@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -56,7 +57,6 @@ class ExecutionDriver : public sparta::Unit {
     //==================== Setup & Initialization ====================
 
     void setId(coreid_t id) { mId = id; }
-    void setTraceFileName(std::string traceFileName) { mTraceFileName = std::move(traceFileName); }
     bool doSetup(coreid_t id, const std::string &snapshotFolderName = "");
     bool isSetupDone() const { return mSetupDone; }
 
@@ -87,16 +87,13 @@ class ExecutionDriver : public sparta::Unit {
 
     InstPtr peekInstruction(address_t fetchPc, bool onSpeculativePath = false);
     bool executeInstruction(InstPtr &inst, bool onSpeculativePath = false);
-    bool retireInstruction(uint64_t tag, uint32_t rob_occupancy = 0, uint32_t rob_size = 0);
+    bool retireInstruction(uint64_t tag);
 
     //==================== Flush Interface ====================
 
     // Flush all instructions with tag >= the given tag. Returns number of instructions flushed.
     // Also sets mNextPc to the correct PC for resuming fetch.
     uint64_t flushInstruction(uint64_t tag);
-
-    // Flush a single instruction by InstPtr
-    bool flushInstruction(InstPtr &inst);
 
    protected:
     void simulationTerminating_() override;
@@ -120,7 +117,6 @@ class ExecutionDriver : public sparta::Unit {
     const bool mAllowEarlyTermination;
     bool mEnableSnapshot;
     bool mLogEnabled{false};
-    std::string mTraceFileName;
 
     //==================== Whisper Components ====================
 

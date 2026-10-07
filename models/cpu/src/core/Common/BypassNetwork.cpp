@@ -10,7 +10,6 @@ namespace midcore {
 void BypassNetwork::configure(const Config& cfg, uint32_t num_fu_groups) {
     mEnabled = cfg.enabled;
     mRegfileReadLatency = cfg.regfile_read_latency;
-    mNumFuGroups = num_fu_groups;
 
     if (!mEnabled) return;
 

@@ -138,6 +138,9 @@ class Execute : public sparta::Unit {
     void receivePackets_(const std::vector<core::IssuePacket>& pkts);
     void receiveFlush_(const core::FlushRequest& req);
     void handleBranchMisprediction_(const InFlightUop& uop);
+    // Compare predicted vs. actual direction of an executed branch and either raise a
+    // misprediction flush or signal a correct resolution. log_prefix tags the ILOG output.
+    void resolveBranch_(InFlightUop& uop, const char* log_prefix);
 
     void buildUnified(const ExecuteParams* p);
     void buildTyped(const ExecuteParams* p);

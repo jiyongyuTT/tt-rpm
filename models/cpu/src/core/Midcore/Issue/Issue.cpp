@@ -232,8 +232,6 @@ void Issue::buildPartitioned(const std::vector<SchedulerConfig>& configs) {
     }
 
     // Resize pending reservations to match the new scheduler count.
-    // This is deferred here (not in the constructor) because partitioned
-    // schedulers are set up after construction via configurePartitioned().
     mPendingReservations.assign(mSchedulers.size(), 0);
 }
 
@@ -503,13 +501,8 @@ void Issue::receiveFlush_(const core::FlushRequest& req) {
         });
     }
 
-    // Clear pending wakeups for squashed instructions
-    auto it = mPendingWakeups.begin();
-    while (it != mPendingWakeups.end()) {
-        // Pending wakeups don't have tags - clear all to be safe
-        // A more refined approach would track tags in PendingWakeup
-        ++it;
-    }
+    // Pending speculative wakeups carry no tag, so they are not filtered here;
+    // they expire on their own schedule.
 
     mNumSquashed += total_squashed;
     ILOG("[issue] cycle " << cycle << " Squashed " << total_squashed << " entries");

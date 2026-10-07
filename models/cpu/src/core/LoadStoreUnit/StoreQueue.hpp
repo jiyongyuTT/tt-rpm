@@ -62,30 +62,10 @@ class StoreQueue {
 
     // ── Store-to-Load Forwarding ─────────────────────────────────────────────
     //
-    // Search backwards (most recent store first) for a store that fully covers
-    // the load address range [addr, addr + size).
+    // Search backwards (most recent store first) for a store older than the load
+    // (lower tag) that fully covers the load address range [addr, addr + size).
     //
     // Returns pointer to the forwarding store entry, or nullptr if no match.
-    //
-    // Note: Only searches stores *older than* the load (by tag) would require
-    // the load's tag as a parameter. For simplicity, we search all entries —
-    // the LSU ensures loads only check stores that are older.
-
-    const Entry* findForwarding(cpu::address_t addr, uint8_t size) const {
-        // Walk backwards (most recent store first)
-        for (auto it = mEntries.rbegin(); it != mEntries.rend(); ++it) {
-            if (!it->address_known) continue;
-            // Full coverage check: store range must contain load range
-            cpu::address_t st_end = it->address + it->access_size;
-            cpu::address_t ld_end = addr + size;
-            if (it->address <= addr && st_end >= ld_end) {
-                return &(*it);
-            }
-        }
-        return nullptr;
-    }
-
-    // Find forwarding store that is older than a given tag
     const Entry* findForwardingOlderThan(cpu::address_t addr, uint8_t size, uint64_t load_tag) const {
         for (auto it = mEntries.rbegin(); it != mEntries.rend(); ++it) {
             // Only consider stores older than the load (lower tag = older)

@@ -74,7 +74,6 @@ class FetchStructures : public sparta::Unit {
     uint32_t mFetchWidth;
     uint32_t mFetchBufferCapacity;
     bool mFirstFetch{true};
-    uint32_t mBufferedBytes{0};
     frontend::FrontendMemoryStructures* mCache = nullptr;
 
     core::PipelineVisualizer* mVis{nullptr};

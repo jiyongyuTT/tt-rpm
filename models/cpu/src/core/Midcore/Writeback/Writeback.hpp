@@ -23,7 +23,6 @@ class ExecutionDriver;
 namespace midcore {
 
 class LSQ;
-class Rename;
 
 class ReorderBuffer {
     std::vector<core::ROBEntry> mEntries;
@@ -176,7 +175,6 @@ class Writeback : public sparta::Unit {
     void setExecutionDriver(cpu::ExecutionDriver* d) { mDriver = d; }
     void setVisualizer(core::PipelineVisualizer* v) { mVis = v; }
     void setLsq(LSQ* lsq) { mLsq = lsq; }
-    void setRename(Rename* rename) { mRename = rename; }
     void setInstructionLimit(uint64_t limit) { mInstructionLimit = limit; }
 
     ReorderBuffer& rob() { return mRob; }
@@ -192,13 +190,11 @@ class Writeback : public sparta::Unit {
     cpu::ExecutionDriver* mDriver{nullptr};
     core::PipelineVisualizer* mVis{nullptr};
     LSQ* mLsq{nullptr};
-    Rename* mRename{nullptr};
     uint32_t mRetireWidth;
     ReorderBuffer mRob;
     bool mLogEnabled{false};
 
     std::vector<core::PhysRegRef> mOldDstsBuf;
-    uint64_t mDbgStallCycles{0};
     uint64_t mInstructionLimit{0};
     uint32_t mRetireTimeoutCycles;
     bool mWatchdogStarted{false};

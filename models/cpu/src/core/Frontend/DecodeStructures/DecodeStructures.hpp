@@ -61,9 +61,9 @@ class DecodeStructures : public sparta::Unit {
 
     void tick();
 
-    // Set upstream FetchQueue (pull model) - for backwards compatibility
+    // Set upstream FetchQueue (pull model, used when queues are not bypassed)
     void setFetchQueue(frontend::FetchQueue* fq) { mFetchQueue = fq; }
-    // Set downstream DecodeQueue for backpressure - for backwards compatibility
+    // Set downstream DecodeQueue for backpressure (used when queues are not bypassed)
     void setDecodeQueue(frontend::DecodeQueue* dq) { mDecodeQueue = dq; }
     // Set downstream Rename for backpressure (direct mode)
     void setRename(midcore::Rename* r) { mRename = r; }
@@ -81,11 +81,9 @@ class DecodeStructures : public sparta::Unit {
     void receivePackets_(const std::vector<core::PipelinePacket>& pkts);
     void receiveBranchPrediction_(const core::BranchPrediction& pred);
 
-    static constexpr size_t kNumUopTypes = 9;
-
     static core::UopType classifyUop(cpu::InstClass ic);
 
-    std::array<uint8_t, kNumUopTypes> mLatencyTable{};
+    std::array<uint8_t, core::kNumUopTypes> mLatencyTable{};
 
     frontend::FetchQueue* mFetchQueue{nullptr};
     frontend::DecodeQueue* mDecodeQueue{nullptr};

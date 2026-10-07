@@ -108,7 +108,7 @@ class CacheInterface {
     // ── Store buffer forwarding ──────────────────────────────────────────────
 
     // Check if a load can be satisfied from the store buffer.
-    // Returns true if forwarding is possible; sets *forwarded_data if provided.
+    // Returns true if a buffered store fully covers [addr, addr + size).
     bool checkStoreBufferForward(address_t addr, uint8_t size) const;
 
     // ── Fill / Invalidate ────────────────────────────────────────────────────

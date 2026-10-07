@@ -13,17 +13,15 @@
 #include "models/cpu/common/SnapshotUtil.hpp"
 #include "models/cpu/common/whisper_include_fix.hpp"
 
-// Constants for store conditional memory operation handling
 namespace {
+// Constants for store conditional memory operation handling
 constexpr unsigned SC_SIZE_CODE_MASK = 3;
 constexpr unsigned SC_SIZE_CODE_SHIFT = 12;
 constexpr unsigned SC_SIZE_1_BYTE = 0;
 constexpr unsigned SC_SIZE_2_BYTE = 1;
 constexpr unsigned SC_SIZE_4_BYTE = 2;
 constexpr unsigned SC_SIZE_8_BYTE = 3;
-}  // namespace
 
-namespace {
 constexpr uint64_t PAGE_SIZE_4KB_BYTES = 4096;
 inline uint64_t get_page(uint64_t addr) { return addr / PAGE_SIZE_4KB_BYTES; }
 inline uint64_t get_page_offset(uint64_t addr) { return addr & (PAGE_SIZE_4KB_BYTES - 1); }
@@ -399,10 +397,7 @@ bool ExecutionDriver::executeInstruction(InstPtr &inst, bool onSpeculativePath) 
     return true;
 }
 
-bool ExecutionDriver::retireInstruction(uint64_t tag, uint32_t rob_occupancy, uint32_t rob_size) {
-    (void)rob_occupancy;
-    (void)rob_size;
-
+bool ExecutionDriver::retireInstruction(uint64_t tag) {
     if (!mSetupDone) {
         return true;
     }
@@ -444,11 +439,9 @@ bool ExecutionDriver::retireInstruction(uint64_t tag, uint32_t rob_occupancy, ui
         }
 
         if (!mNextPcSet && mNextPcSetInstId == perfApiTag) {
-            // FIX: For both trapped and non-trapped instructions, use nextPc().
-            // For trapped instructions, nextPc() returns the trap handler address.
-            // The previous code incorrectly used instrVa() + instrSize() for trapped
-            // instructions, which gave the sequential next instruction instead of
-            // the trap handler, causing PC divergence with Whisper.
+            // Use nextPc() for both trapped and non-trapped instructions: for a
+            // trapped instruction it returns the trap handler address, which keeps
+            // the model's PC in sync with Whisper.
             mNextPc = pacPtr->nextPc();
             mNextPcSet = true;
         }
@@ -520,7 +513,7 @@ const std::shared_ptr<TT_PERF::InstrPac> ExecutionDriver::processNextRecordHelpe
     sparta_assert(pacPtr->instrVa() == fetchPc, "[processNextRecordHelper] Instruction virtual address mismatch: expected: "
                                                     << std::hex << fetchPc << " got: " << pacPtr->instrVa() << " for tag: " << tag << std::dec);
 
-    ok = ok and perfApi.decode(mHartIx, 0, tag);
+    ok = perfApi.decode(mHartIx, 0, tag);
     sparta_assert(ok, "Decode failure in execution driver");
 
     const WdRiscv::DecodedInst &decodedInst = pacPtr->decodedInst();
@@ -533,8 +526,6 @@ const std::shared_ptr<TT_PERF::InstrPac> ExecutionDriver::processNextRecordHelpe
     if ((!flush && execute) || (needsExecute && !isSerializing(pacPtr))) {
         ok = perfApi.execute(mHartIx, 0, tag);
         sparta_assert(ok, "Execute failure in execution driver");
-
-        trap = trap or pacPtr->trapped();
     }
 
     bool traceRecordSuccess = populateTraceRecord(record, pacPtr);
@@ -587,7 +578,7 @@ bool ExecutionDriver::populateRecordOperands(WhisperUtil::TraceRecord &record, c
     const auto destCount = pacPtr->getDestOperands(destOperands);
 
     sparta_assert(srcCount <= 3, "[Execution Driver] source operand count: " << srcCount << " higher than expected");
-    sparta_assert(destCount <= 2, "[Execution Driver] source operand count: " << destCount << " higher than expected");
+    sparta_assert(destCount <= 2, "[Execution Driver] destination operand count: " << destCount << " higher than expected");
 
     for (unsigned i = 0; i < srcCount; i++) {
         WhisperUtil::Operand operand;
@@ -869,19 +860,6 @@ uint64_t ExecutionDriver::flushInstruction(uint64_t tag) {
     ILOG("[flushInstruction] Flush complete, mNextPc: " << std::hex << mNextPc << " next fetch instruction id: " << std::dec << mSequence);
 
     return numInstsFlushed;
-}
-
-bool ExecutionDriver::flushInstruction(InstPtr &inst) {
-    const auto modelTag = inst->getId().getInstNum();
-
-    auto &perfApi = *mPerfApiHandle;
-    const auto pacPtr = perfApi.getInstructionPacket(mHartIx, modelTag);
-    sparta_assert(pacPtr, "[Execution Driver] instruction being flushed, tag " << modelTag << " must be valid in perfApi");
-
-    bool ok = perfApi.flush(mHartIx, 0, modelTag);
-    sparta_assert(ok, "[Execution Driver] Flush for inst id " << modelTag << " Failed in whisper");
-
-    return true;
 }
 
 }  // namespace cpu

@@ -8,7 +8,6 @@
 #include "Common/SpeculationConfig.hpp"
 #include "LoadStoreUnit/LSQ/LSQ.hpp"
 #include "Logging.hpp"
-#include "Midcore/Rename/Rename.hpp"
 #include "models/cpu/common/ExecutionDriver.hpp"
 #include "models/cpu/common/whisper_include_fix.hpp"
 
@@ -214,12 +213,6 @@ void Writeback::tick() {
             getScheduler()->stopRunning();
             return;
         }
-    }
-
-    if (retired_this_cycle > 0) {
-        mDbgStallCycles = 0;
-    } else if (!mRob.empty()) {
-        ++mDbgStallCycles;
     }
 
     if (!mOldDstsBuf.empty()) {

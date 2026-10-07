@@ -7,7 +7,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <ostream>
 #include <sstream>
 #include <string_view>
@@ -50,7 +49,6 @@ PipelineVisualizer::PipelineVisualizer(uint32_t max_instructions, std::string ou
 
 void PipelineVisualizer::enableDebugMode(const std::string& debug_file, uint64_t start_cycle, uint64_t end_cycle) {
     mDebugEnabled = true;
-    mDebugFile = debug_file;
     mDebugStartCycle = start_cycle;
     mDebugEndCycle = end_cycle;
     mLastDebugCycle = start_cycle > 0 ? start_cycle - 1 : 0;
@@ -198,9 +196,6 @@ void PipelineVisualizer::onBranchMispredict(uint64_t tag, uint64_t c) {
 void PipelineVisualizer::onWritePortStall(uint64_t tag, uint64_t) {
     if (auto* t = get_(tag)) t->wp_stall = true;
 }
-void PipelineVisualizer::onSquashFallthrough(uint64_t tag) {
-    if (auto* t = get_(tag)) t->is_fallthrough_squash = true;
-}
 void PipelineVisualizer::onSquash(uint64_t tag, uint64_t cycle) {
     if (auto* t = get_(tag)) t->squash_cycle = cycle;
 }
@@ -347,81 +342,6 @@ void PipelineVisualizer::dumpDebugWaterfall_(std::ostream& os, uint64_t page_sta
     os.flush();
 }
 
-void PipelineVisualizer::dumpDebugCycle_(std::ostream& os, uint64_t cycle) const {
-    os << "\n=== Cycle " << cycle << " ===\n";
-
-    // Group instructions by their current stage
-    std::vector<std::tuple<uint64_t, const InstrTrace*, const char*>> active;
-
-    for (uint64_t tag : mOrder) {
-        const auto& t = mTraces.at(tag);
-        const char* stage = stageName_(t, cycle);
-        if (stage[0] != ' ' && stage[0] != '.') {  // Active in some stage
-            active.emplace_back(tag, &t, stage);
-        }
-    }
-
-    if (active.empty()) {
-        os << "  (no active instructions)\n";
-        return;
-    }
-
-    // Sort by tag for consistent output
-    std::sort(active.begin(), active.end(), [](const auto& a, const auto& b) { return std::get<0>(a) < std::get<0>(b); });
-
-    // Output format: VIS_TAG (depth) | WHISPER_TAG | PC | TYPE | STAGE | DISASM
-    os << std::left << std::setw(20) << "VIS_TAG" << std::setw(8) << "WTAG" << std::setw(6) << "DEPTH" << std::setw(14) << "PC" << std::setw(7) << "TYPE"
-       << std::setw(6) << "STAGE"
-       << "DISASM\n";
-    os << std::string(80, '-') << "\n";
-
-    for (const auto& [tag, t, stage] : active) {
-        std::ostringstream pc_str;
-        pc_str << "0x" << std::hex << t->pc;
-
-        UopType display_type = t->rename ? t->uop_type : instClassToUopType(t->inst_class);
-
-        os << std::left << std::setw(20) << formatTag(tag, t->wrong_path_depth) << std::setw(8) << t->whisper_tag << std::setw(6)
-           << static_cast<int>(t->wrong_path_depth) << std::setw(14) << pc_str.str() << std::setw(7) << uopStr_(display_type) << std::setw(6) << stage
-           << t->disasm << "\n";
-    }
-
-    // Summary stats for the cycle
-    std::map<std::string, int> stage_counts;
-    for (const auto& [tag, t, stage] : active) {
-        (void)tag;
-        (void)t;
-        stage_counts[stage]++;
-    }
-
-    os << "\nStage Summary: ";
-    for (const auto& [stage, count] : stage_counts) {
-        os << stage << "=" << count << " ";
-    }
-    os << "\n";
-}
-
-// Returns true if instruction should be filtered from visualization
-// We want to SHOW wrong-path instructions (depth > 0) even if squashed
-// We want to HIDE correct-path "leftovers" (depth == 0) that didn't complete
-// We want to HIDE fallthrough instructions after a taken branch (not on predicted path)
-bool PipelineVisualizer::wasSquashedEarly_(uint64_t tag, const InstrTrace& t) const {
-    (void)tag;  // With real tags, we use wrong_path_depth instead
-    // Hide fallthrough instructions after a taken branch - these are not on the predicted path
-
-    return false;
-    if (t.is_fallthrough_squash) {
-        return true;
-    }
-    // Always show wrong-path instructions (depth > 0) - these are the actual predicted path
-    if (t.wrong_path_depth > 0) {
-        return false;  // Show all wrong-path instructions
-    }
-    // For correct-path (depth == 0): hide if it didn't complete (leftover collateral)
-    bool completed = t.wb || t.exe_exit || t.lsq_exit;
-    return !completed;
-}
-
 // Returns 2-char stage label for a given cycle.
 //   F  = Fetch          Ic = ICache         Fq = FetchQueue
 //   D  = Decode         Dq = DecodeQueue    Rn = Rename
@@ -535,10 +455,6 @@ void PipelineVisualizer::dumpTable_(std::ostream& os) const {
     for (uint64_t tag : mOrder) {
         const auto& t = mTraces.at(tag);
 
-        // Skip correct-path leftovers (depth 0 that didn't complete)
-        // but show wrong-path instructions even if squashed
-        if (wasSquashedEarly_(tag, t)) continue;
-
         std::ostringstream pc_str;
         pc_str << "0x" << std::hex << t.pc;
 
@@ -574,8 +490,6 @@ void PipelineVisualizer::dumpWaterfall_(std::ostream& os) const {
     uint64_t c_min = UINT64_MAX, c_max = 0;
     for (uint64_t tag : mOrder) {
         const auto& t = mTraces.at(tag);
-        // Skip correct-path leftovers for cycle range calculation
-        if (wasSquashedEarly_(tag, t)) continue;
         if (t.fetch) {
             c_min = std::min(c_min, t.fetch);
         }
@@ -602,9 +516,6 @@ void PipelineVisualizer::dumpWaterfall_(std::ostream& os) const {
 
         for (uint64_t tag : mOrder) {
             const auto& t = mTraces.at(tag);
-
-            // Skip correct-path leftovers but show wrong-path instructions
-            if (wasSquashedEarly_(tag, t)) continue;
 
             uint64_t end = t.wb ? t.wb : std::max({t.exe_exit, t.lsq_exit, t.rename, t.icache_end});
             if (t.fetch > page_end || (end > 0 && end < page_start)) continue;
@@ -665,9 +576,6 @@ void PipelineVisualizer::dumpLog_(std::ostream& os) const {
 
     for (uint64_t tag : mOrder) {
         const auto& t = mTraces.at(tag);
-
-        // Skip correct-path leftovers but show wrong-path instructions
-        if (wasSquashedEarly_(tag, t)) continue;
 
         const std::string rid = "R" + std::to_string(tag);
 

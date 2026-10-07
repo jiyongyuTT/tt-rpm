@@ -329,6 +329,14 @@ class Rename : public sparta::Unit {
     uint32_t tickOoo_();
     uint32_t tickInorder_();
 
+    // Packet source for dispatch: the DecodeQueue, or mPendingPackets in direct mode.
+    bool hasPendingPacket_() const;
+    const core::DecodePacket* peekPacket_() const;
+    core::DecodePacket pullPacket_();
+
+    // Collect the register-file source/destination operands of an instruction.
+    static void extractRegOperands_(const core::DecodePacket& dp, std::vector<core::RegOperand>& src_regs, std::vector<core::RegOperand>& dst_regs);
+
     struct RenameEntry {
         core::DecodePacket dp;
         std::vector<core::RegOperand> src_regs;

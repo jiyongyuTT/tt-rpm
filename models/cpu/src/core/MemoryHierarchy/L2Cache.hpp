@@ -77,7 +77,7 @@ class L2Cache : public sparta::Unit {
     void tick();
 
     // Attach a CacheTracer for arbitration + L2-hit/miss events.
-    // Ownership stays with the caller (CoreTop).  Must be set before tick().
+    // Ownership stays with the caller (ChipSim).  Must be set before tick().
     void setTracer(cpu::CacheTracer* t) { mTracer = t; }
 
     bool canAcceptIcacheRequest() const { return mIcachePending.size() < mQueueCapacity; }

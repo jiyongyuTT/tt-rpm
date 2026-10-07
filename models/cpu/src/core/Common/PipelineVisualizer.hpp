@@ -39,9 +39,8 @@ struct InstrTrace {
     uint64_t icache_miss_cycle{0};
     uint64_t dcache_miss_cycle{0};
     uint64_t branch_mispred_cycle{0};
-    uint64_t squash_cycle{0};           // cycle instruction was squashed (0 = not squashed)
-    bool wp_stall{false};               // stalled waiting for write port
-    bool is_fallthrough_squash{false};  // squashed fallthrough after taken branch
+    uint64_t squash_cycle{0};  // cycle instruction was squashed (0 = not squashed)
+    bool wp_stall{false};      // stalled waiting for write port
 };
 
 class PipelineVisualizer {
@@ -82,7 +81,6 @@ class PipelineVisualizer {
     void onBranchMispredict(uint64_t tag, uint64_t cycle);
     void onWritePortStall(uint64_t tag, uint64_t cycle);
     void onSquash(uint64_t tag, uint64_t cycle);  // instruction squashed
-    void onSquashFallthrough(uint64_t tag);       // fallthrough after taken branch
 
     void dump();
 
@@ -97,7 +95,6 @@ class PipelineVisualizer {
 
     // Debug mode - output per-cycle state for a specific cycle range
     bool mDebugEnabled{false};
-    std::string mDebugFile;
     uint64_t mDebugStartCycle{0};
     uint64_t mDebugEndCycle{0};
     uint64_t mLastDebugCycle{0};
@@ -106,13 +103,10 @@ class PipelineVisualizer {
 
     InstrTrace* get_(uint64_t tag);
 
-    bool wasSquashedEarly_(uint64_t tag, const InstrTrace& t) const;
-
     void dumpTable_(std::ostream& os) const;
     void dumpWaterfall_(std::ostream& os) const;
     void dumpLog_(std::ostream& os) const;
     void dumpKanata_(std::ostream& os) const;  // Onikiri2-Kanata format (for ext/konata)
-    void dumpDebugCycle_(std::ostream& os, uint64_t cycle) const;
     void dumpDebugWaterfall_(std::ostream& os, uint64_t page_start, uint64_t page_end) const;
 
     const char* stageName_(const InstrTrace& t, uint64_t cycle) const;
