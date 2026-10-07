@@ -64,7 +64,7 @@ bash ci/docker_build.sh --test
 
 | Flag | Description |
 |------|-------------|
-| `-r TICKS` | Run for up to TICKS (~3 ticks/cycle at 3 GHz; default: 100) |
+| `-r TICKS` | Run for up to TICKS (~3 ticks/cycle at 3 GHz; omit to run until the program exits) |
 | `-i INSTRS` | Stop after retiring INSTRS instructions (0 = no limit; run to program exit) |
 | `--cpu-freq GHZ` | CPU clock frequency (default: 3.0 GHz) |
 | `-c CONFIG.yaml` | Load a Sparta config file |
@@ -121,7 +121,9 @@ Output is saved to `build/<model>/output/<timestamp>/`:
 ### config.yaml
 
 The **core** model is configured via `models/cpu/src/core/config.yaml`. Parameters
-are organized under `top.core0`:
+are organized under `top.core0` (see
+[CONFIG_README.md](models/cpu/src/core/CONFIG_README.md) for the full parameter
+reference):
 
 ```yaml
 top.core0:
@@ -228,7 +230,7 @@ A preset in-order config is at `models/cpu/src/core/config_inorder.yaml`:
 ## Directory Structure
 
 ```
-rpm/
+tt-rpm/
 ├── CMakeLists.txt                  # Top-level CMake (builds all models)
 ├── .clang-format                   # Code formatting rules
 │
@@ -248,30 +250,37 @@ rpm/
 │   ├── cmake/                      # Shared CMake find-modules
 │   ├── cpu/
 │   │   ├── common/                 # Shared: ExecutionDriver, Instruction, types
+│   │   ├── predictors/             # (reserved for future expansion) branch predictors
+│   │   ├── prefetch/               # (reserved for future expansion) prefetchers
 │   │   └── src/
 │   │       ├── core/               # Configurable in-order / OOO core model
 │   │       └── simple/             # Minimal single-cycle CPU model
+│   ├── analysis/                   # (reserved for future expansion) analysis models
 │   ├── cluster/                    # (reserved for future expansion) cluster-level models
 │   ├── fabric/                     # (reserved for future expansion) interconnect fabric
 │   ├── memory_model/               # (reserved for future expansion) memory subsystem model
-│   └── soc/                        # (reserved for future expansion) SoC-level model
+│   ├── profiler/                   # (reserved for future expansion) profiler
+│   ├── soc/                        # (reserved for future expansion) SoC-level model
+│   └── sys/                        # (reserved for future expansion) system-level model
 │
 ├── scripts/                        # Build, run & analysis scripts
 │   ├── build_scripts/
 │   ├── run_scripts/
 │   └── parse_scripts/
 │
-├── configs/                        # Simulation configurations
+├── configs/                        # Experiment configs for the Slurm runner
 │
 └── tests/                          # Bare-metal CoreMark / Dhrystone workloads
     ├── Makefile                    # Builds + runs the workloads in the core model
     ├── coremark/                   # CoreMark submodule (+ bare-metal patch)
+    ├── dhrystone/                  # util.h shim for the bare-metal Dhrystone build
     └── riscv-tests/                # riscv-tests submodule (Dhrystone source)
 ```
 
 ## Build Scripts
 
-All scripts are in `scripts/build_scripts/` and accept `--help`.
+All scripts are in `scripts/build_scripts/`; `build_deps.sh` and `build_model.sh`
+accept `--help`.
 
 | Script | Purpose |
 |--------|---------|
